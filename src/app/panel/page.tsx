@@ -38,7 +38,7 @@ export default function Panel() {
                 const apiKey = localStorage.getItem("pv_api_key");
                 if (!apiKey) return;
                 const base = process.env.NEXT_PUBLIC_BACKEND_BASE || "http://localhost:8000";
-                const res = await fetch(`${base}/api/me/`, {
+                const res = await fetch("/api/backend/me", {
                     headers: { "X-API-Key": apiKey },
                 });
                 const data = await res.json();
