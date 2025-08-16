@@ -8,7 +8,9 @@ type PVUser = {
     last_name?: string;
     username?: string;
     photo_url?: string;
+    avatar?: string;   // <--- добавляем
 };
+
 
 declare global {
     interface Window {
@@ -48,7 +50,17 @@ export default function Panel() {
                     headers: { "X-API-Key": apiKey },
                 });
                 const data = await res.json();
-                if (res.ok) setMe(data);
+                if (res.ok) {
+                    setMe(data);
+
+                    // если в ответе есть avatar, обновим user и localStorage
+                    if (data.avatar && user) {
+                        const updated = { ...user, avatar: data.avatar };
+                        setUser(updated);
+                        localStorage.setItem("pv_user", JSON.stringify(updated));
+                    }
+                }
+
                 else console.warn("me error", data);
             } catch (e) {
                 console.warn("me fetch failed", e);
@@ -84,16 +96,15 @@ export default function Panel() {
                         {/* User card */}
                         <div className="rounded-2xl bg-neutral-900/60 p-4 ring-1 ring-white/10 backdrop-blur">
                             <div className="flex items-center gap-4">
-                                {user.photo_url ? (
+                                {user.avatar || user.photo_url ? (
                                     <img
-                                        src={user.photo_url}
+                                        src={user.avatar || user.photo_url}
                                         alt="avatar"
                                         className="h-12 w-12 rounded-full object-cover ring-1 ring-white/10"
                                     />
                                 ) : (
                                     <div className="h-12 w-12 rounded-full bg-neutral-800 ring-1 ring-white/10" />
                                 )}
-
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm/5 text-neutral-200">
                     <span className="font-medium">

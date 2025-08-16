@@ -24,6 +24,9 @@ export default function TelegramAuthPage() {
                     setMsg(`Auth failed: ${data?.error || res.statusText}`);
                     return;
                 }
+                if (data.avatar) {
+                    data.user.avatar = data.avatar;
+                }
                 localStorage.setItem("pv_user", JSON.stringify(data.user));
                 if (data.api_key) {
                     localStorage.setItem("pv_api_key", data.api_key);
