@@ -8,15 +8,38 @@ const AUTH_URL_ENV = process.env.NEXT_PUBLIC_TG_AUTH_URL;
 
 export default function Home() {
     const router = useRouter();
-    const [isMiniApp, setIsMiniApp] = useState(false);
+    const [mode, setMode] = useState<"loading" | "miniapp" | "browser">("loading");
 
     useEffect(() => {
-        const tg = (window as any).Telegram?.WebApp;
-        if (tg) {
-            setIsMiniApp(true);
-            router.replace("/auth/telegram?source=miniapp");
-        } else {
-            setIsMiniApp(false);
+        if (typeof window !== "undefined") {
+            const tg = (window as any).Telegram?.WebApp;
+            if (tg && tg.initData) {
+                setMode("miniapp");
+                // вместо редиректа – сразу POST на наш API
+                fetch("/api/telegram/auth/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        search: encodeURIComponent(tg.initData),
+                        source: "miniapp",
+                    }),
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data.ok) {
+                            // например, сохраняем api_key в localStorage
+                            localStorage.setItem("api_key", data.api_key);
+                            router.replace("/dashboard"); // редиректим на панель
+                        } else {
+                            console.error("MiniApp login failed:", data);
+                        }
+                    })
+                    .catch((err) => console.error("MiniApp auth error:", err));
+            } else {
+                setMode("browser");
+            }
+
         }
     }, [router]);
 
@@ -31,25 +54,30 @@ export default function Home() {
         );
     }
 
-    if (isMiniApp) {
+    if (mode === "loading") {
+        return <main className="p-6"><p>Loading…</p></main>;
+    }
+
+    if (mode === "miniapp") {
+        // ✅ Мини-апп → никакого виджета
         return (
             <main className="p-6">
-                <h1 className="text-xl font-semibold mb-3">PolyVoice Mini</h1>
+                <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.8</h1>
                 <p className="text-sm opacity-70">Redirecting inside Telegram…</p>
             </main>
         );
     }
 
-    // Default: browser with widget
+    // ✅ Только браузер → показываем виджет
     const authUrl =
         AUTH_URL_ENV ||
         (typeof window !== "undefined"
-            ? `${window.location.origin}/auth/telegram`
-            : "/auth/telegram");
+            ? `${window.location.origin}/api/telegram/auth/`
+            : "/api/telegram/auth/");
 
     return (
         <main className="p-6">
-            <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.4</h1>
+            <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.8</h1>
             <Script
                 src="https://telegram.org/js/telegram-widget.js?21"
                 strategy="afterInteractive"
