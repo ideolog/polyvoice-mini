@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* твои кастомные стили */
+@layer base {
+    body {
+        @apply bg-black text-red-600;
+    }
+}
+
 /* Доп. компоненты под твой стиль */
 @layer components {
     .card {
