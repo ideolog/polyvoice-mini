@@ -1,3 +1,4 @@
+// src/app/panel/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,9 +9,8 @@ type PVUser = {
     last_name?: string;
     username?: string;
     photo_url?: string;
-    avatar?: string;   // <--- добавляем
+    avatar?: string;
 };
-
 
 declare global {
     interface Window {
@@ -25,7 +25,6 @@ export default function Panel() {
     const [me, setMe] = useState<any>(null);
 
     useEffect(() => {
-        // Telegram WebApp init (optional when opened inside Telegram)
         const tg = window.Telegram?.WebApp;
         if (tg) {
             tg.ready();
@@ -34,34 +33,40 @@ export default function Panel() {
         }
         setReady(true);
 
-        // Load user from localStorage (set after /auth/telegram)
+        // загружаем Telegram user (pv_user)
         try {
             const raw = localStorage.getItem("pv_user");
             if (raw) setUser(JSON.parse(raw));
         } catch {}
 
+        // тянем Django user (/api/me/)
         const fetchMe = async () => {
             try {
                 const apiKey = localStorage.getItem("pv_api_key");
                 if (!apiKey) return;
-                const base =
-                    process.env.NEXT_PUBLIC_BACKEND_BASE || "http://localhost:8000";
-                const res = await fetch(`${base}/api/me/`, {
+                const res = await fetch("/api/backend/me", {
                     headers: { "X-API-Key": apiKey },
                 });
                 const data = await res.json();
                 if (res.ok) {
                     setMe(data);
 
-                    // если в ответе есть avatar, обновим user и localStorage
+                    // печатаем в терминал наличие ключа
+                    if (data.api_key_present) {
+                        console.log("✅ API key present for", data.email || data.id);
+                    } else {
+                        console.log("⚠️ API key missing for", data.email || data.id);
+                    }
+
+                    // обновляем аватар в локалсторадж
                     if (data.avatar && user) {
                         const updated = { ...user, avatar: data.avatar };
                         setUser(updated);
                         localStorage.setItem("pv_user", JSON.stringify(updated));
                     }
+                } else {
+                    console.warn("me error", data);
                 }
-
-                else console.warn("me error", data);
             } catch (e) {
                 console.warn("me fetch failed", e);
             }
@@ -71,6 +76,7 @@ export default function Panel() {
 
     const logout = () => {
         localStorage.removeItem("pv_user");
+        localStorage.removeItem("pv_api_key");
         router.replace("/");
     };
 
@@ -81,11 +87,11 @@ export default function Panel() {
                 <header className="mb-4">
                     <h1 className="text-2xl font-semibold tracking-tight">Panel</h1>
                     <div className="mt-2 inline-flex items-center rounded-full bg-neutral-900 px-3 py-1 text-xs text-neutral-300 ring-1 ring-white/5">
-            <span
-                className={`mr-2 inline-block h-2 w-2 rounded-full ${
-                    ready ? "bg-emerald-500" : "bg-yellow-500"
-                }`}
-            />
+                        <span
+                            className={`mr-2 inline-block h-2 w-2 rounded-full ${
+                                ready ? "bg-emerald-500" : "bg-yellow-500"
+                            }`}
+                        />
                         {ready ? "Telegram WebApp: ready" : "Open inside Telegram"}
                     </div>
                 </header>
@@ -107,13 +113,13 @@ export default function Panel() {
                                 )}
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm/5 text-neutral-200">
-                    <span className="font-medium">
-                      {user.first_name} {user.last_name}
-                    </span>
+                                        <span className="font-medium">
+                                            {user.first_name} {user.last_name}
+                                        </span>
                                         {user.username ? (
                                             <span className="ml-1 text-neutral-400">
-                        @{user.username}
-                      </span>
+                                                @{user.username}
+                                            </span>
                                         ) : null}
                                     </div>
                                     <div className="mt-1 text-xs text-neutral-400">
@@ -136,33 +142,20 @@ export default function Panel() {
                                     <div className="text-xs font-medium text-neutral-300">
                                         Django user
                                     </div>
-                                    <div className="mt-1 text-xs text-neutral-400">
-                    <span className="mr-2">
-                      email:{" "}
-                        <span className="text-neutral-200">
-                        {me.email || "—"}
-                      </span>
-                    </span>
-                                        <span className="mx-2">·</span>
-                                        <span className="mr-2">
-                      plan:{" "}
+                                    <div className="mt-1 text-xs text-neutral-400 space-y-1">
+                                        <div>
+                                            email:{" "}
                                             <span className="text-neutral-200">
-                        {me.plan || "—"}
-                      </span>
-                    </span>
-                                        <span className="mx-2">·</span>
-                                        <span>
-                      api_key:{" "}
-                                            <span
-                                                className={
-                                                    me.api_key_present
-                                                        ? "text-emerald-400"
-                                                        : "text-rose-400"
-                                                }
-                                            >
-                        {me.api_key_present ? "set" : "missing"}
-                      </span>
-                    </span>
+                                                {me.email || "—"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            plan:{" "}
+                                            <span className="text-neutral-200">
+                                                {me.plan || "—"}
+                                            </span>
+                                        </div>
+                                        {/* api_key убран с UI */}
                                     </div>
                                 </div>
                             )}

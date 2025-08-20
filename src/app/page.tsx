@@ -3,50 +3,75 @@ import Script from "next/script";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import DebugInitData from "@/components/DebugData";
+
+import {
+    initDataRaw as _initDataRaw,
+    initDataState as _initDataState,
+} from "@telegram-apps/sdk-react";
+
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TG_BOT_USERNAME;
 const AUTH_URL_ENV = process.env.NEXT_PUBLIC_TG_AUTH_URL;
 
-export default function Home() {
+export default function Page() {
     const router = useRouter();
     const [mode, setMode] = useState<"loading" | "miniapp" | "browser">("loading");
 
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const tg = (window as any).Telegram?.WebApp;
-            if (tg && tg.initData) {
-                setMode("miniapp");
-                // вместо редиректа – сразу POST на наш API
-                fetch("/api/telegram/auth/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        search: encodeURIComponent(tg.initData),
-                        source: "miniapp",
-                    }),
-                })
-                    .then((res) => res.json())
-                    .then((data) => {
-                        if (data.ok) {
-                            // например, сохраняем api_key в localStorage
-                            localStorage.setItem("api_key", data.api_key);
-                            router.replace("/dashboard"); // редиректим на панель
-                        } else {
-                            console.error("MiniApp login failed:", data);
-                        }
-                    })
-                    .catch((err) => console.error("MiniApp auth error:", err));
-            } else {
-                setMode("browser");
-            }
+    const [raw, setRaw] = useState<string | null>(null);
+    const [unsafe, setUnsafe] = useState<any>(null);
 
+    useEffect(() => {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            setMode("miniapp");
+        } else {
+            setMode("browser");
         }
-    }, [router]);
+
+        setRaw(_initDataRaw?.value || tg?.initData || null);
+        setUnsafe(_initDataState?.value || tg?.initDataUnsafe || null);
+    }, []);
+
+    useEffect(() => {
+        console.log("🔥 effect triggered:", { mode, raw, unsafe });
+
+        if (mode === "miniapp" && raw) {
+            console.log("🚀 sending fetch...");
+            fetch("/api/backend/telegram-auth/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    raw,
+                    unsafe,
+                    source: "miniapp",
+                }),
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.ok) {
+                        // ✅ сохраняем и ключ, и пользователя
+                        localStorage.setItem("pv_api_key", data.api_key);
+                        localStorage.setItem("pv_user", JSON.stringify(data.user));
+
+                        router.replace("/panel");
+                    } else {
+                        console.error("MiniApp login failed:", data);
+                    }
+                })
+                .catch((err) => console.error("MiniApp auth error:", err));
+        }
+    }, [mode, raw, unsafe, router]);
 
     if (!BOT_USERNAME) {
         return (
             <main className="p-6">
                 <h1 className="text-xl font-semibold mb-3">PolyVoice Mini</h1>
+                <DebugInitData />
                 <p className="text-sm text-red-600">
                     Set <code>NEXT_PUBLIC_TG_BOT_USERNAME</code> in <code>.env.local</code>.
                 </p>
@@ -55,20 +80,23 @@ export default function Home() {
     }
 
     if (mode === "loading") {
-        return <main className="p-6"><p>Loading…</p></main>;
+        return (
+            <main className="p-6">
+                <p>Loading…</p>
+            </main>
+        );
     }
 
     if (mode === "miniapp") {
-        // ✅ Мини-апп → никакого виджета
         return (
             <main className="p-6">
-                <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.8</h1>
+                <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.9</h1>
+                <DebugInitData />
                 <p className="text-sm opacity-70">Redirecting inside Telegram…</p>
             </main>
         );
     }
 
-    // ✅ Только браузер → показываем виджет
     const authUrl =
         AUTH_URL_ENV ||
         (typeof window !== "undefined"
@@ -77,7 +105,8 @@ export default function Home() {
 
     return (
         <main className="p-6">
-            <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.8</h1>
+            <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.9</h1>
+            <DebugInitData />
             <Script
                 src="https://telegram.org/js/telegram-widget.js?21"
                 strategy="afterInteractive"
