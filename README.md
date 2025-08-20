@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PolyVoice Mini
 
-## Getting Started
+Telegram MiniApp + Django backend integration.
 
-First, run the development server:
+## 📌 Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This project consists of:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Frontend**: Next.js 15 (`app/` directory, TypeScript, React).
+- **Backend**: Django 4 + DRF.
+- **Authentication**: via Telegram MiniApp + API keys.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🗂️ Frontend Structure
 
-## Learn More
+- **`src/app/page.tsx` (Main page)**
+    - Detects if opened inside Telegram MiniApp or browser.
+    - MiniApp flow:
+        - Extracts `initDataRaw` + `initDataUnsafe`.
+        - Calls `/api/backend/telegram-auth/`.
+        - Stores `pv_api_key` + `pv_user` in `localStorage`.
+        - Redirects to `/panel`.
+    - Browser flow: renders Telegram login widget.
 
-To learn more about Next.js, take a look at the following resources:
+- **`src/app/panel/page.tsx` (User panel)**
+    - Loads `pv_user` from `localStorage`.
+    - Calls `/api/backend/me` using `X-API-Key`.
+    - Updates user with Django data (`email`, `plan`, `avatar`).
+    - Renders user card.
+    - `Logout` → clears local storage → redirect to `/`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **API proxy routes**
+    - `src/app/api/backend/telegram-auth/route.ts` → forwards POST to Django `/api/telegram/auth/`.
+    - `src/app/api/backend/me/route.ts` → forwards GET to Django `/api/me/`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🖥️ Backend Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Auth (`users/auth.py`)**
+    - `ApiKeyAuthentication` → checks `X-API-Key` header.
+    - Finds user by API key or rejects with 401.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **MeView (`users/views.py`)**
+    - Endpoint: `/api/me/`.
+    - Requires `X-API-Key`.
+    - Returns:
+      ```json
+      {
+        "id": 1,
+        "email": "user@example.com",
+        "api_key_present": true,
+        "plan": "free",
+        "avatar": "http://localhost:8000/media/.../avatar.png"
+      }
+      ```
+
+- **Telegram Auth (`/api/telegram/auth/`)**
+    - Accepts `raw` + `unsafe` from MiniApp.
+    - Validates Ed25519 signature.
+    - Creates or finds user.
+    - Returns `api_key` and Telegram user data.
+
+---
+
+## 🔑 Login Flow (End-to-End)
+
+1. User opens MiniApp.
+2. Frontend sends `raw` + `unsafe` → `/api/backend/telegram-auth/`.
+3. Django validates → returns `api_key`.
+4. Frontend saves `pv_api_key` + `pv_user` in `localStorage`.
+5. Redirect → `/panel`.
+6. `/panel` requests `/api/backend/me` with `X-API-Key`.
+7. Django returns email/plan/avatar.
+8. Frontend updates UI.
+9. Logout clears local storage.
+
+---
+
+## ✅ Current Status
+
+- ✅ Automatic login via MiniApp works.
+- ✅ Proxy routes for `/telegram-auth` and `/me` fixed.
+- ✅ Avatar, email, and plan rendering in panel.
+- ✅ `api_key` hidden from UI (but presence logged on backend).
+
+---
+
+## 🚀 Next Steps
+
+- Handle **desktop/browser flow** (currently no redirect possible without Telegram).
+- Add proper error handling for invalid MiniApp sessions.
+- Expand `/me/` with more user metadata.
+
