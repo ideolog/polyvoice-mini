@@ -91,6 +91,40 @@ PolyVoice supports **two independent login flows**:
 - Both redirect to `/panel` after login.
 - Both update user avatars automatically if `photo_url` changes.
 
+### 🔄 Login Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Proxy
+    participant Backend
+
+    rect rgb(200, 250, 200)
+    note over User,Backend: MiniApp Login
+    User->>Frontend: Open MiniApp
+    Frontend->>Proxy: POST /api/backend/telegram-auth (raw+unsafe)
+    Proxy->>Backend: POST /api/telegram/auth/
+    Backend-->>Proxy: { ok, user, api_key }
+    Proxy-->>Frontend: { ok, user, api_key }
+    Frontend->>Frontend: Save pv_user + pv_api_key<br/>Redirect to /panel
+    end
+
+    rect rgb(200, 220, 250)
+    note over User,Backend: Widget Login
+    User->>Frontend: Open browser app
+    Frontend->>Frontend: Render telegram-widget.js
+    User->>Frontend: Login → redirect to /auth/telegram-widget?params
+    Frontend->>Proxy: GET /api/backend/telegram-auth-widget?params
+    Proxy->>Backend: GET /api/telegram/widget-auth?params
+    Backend-->>Proxy: { ok, user, api_key }
+    Proxy-->>Frontend: { ok, user, api_key }
+    Frontend->>Frontend: Save pv_user + pv_api_key<br/>Redirect to /panel
+    end
+```
+
+
+
 ---
 
 ## ✅ Current Status
