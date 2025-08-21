@@ -1,4 +1,4 @@
-// lib/telegram.ts
+// lib/telegram-widget.ts
 // All comments in English.
 export function isTelegramEnv(): boolean {
     return typeof window !== 'undefined' && !!(window as any).Telegram?.WebApp;

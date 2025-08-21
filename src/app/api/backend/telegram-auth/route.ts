@@ -1,4 +1,4 @@
-// src/app/api/backend/telegram-auth/route.ts
+// src/app/api/backend/telegram-widget-auth/route.ts
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
             { status: res.status },
         );
     } catch (e) {
-        console.error("❌ telegram-auth proxy failed:", e);
+        console.error("❌ telegram-widget-auth proxy failed:", e);
         return NextResponse.json(
             { ok: false, error: "proxy_failed" },
             { status: 500 },

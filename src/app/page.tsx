@@ -3,8 +3,6 @@ import Script from "next/script";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import DebugInitData from "@/components/DebugData";
-
 import {
     initDataRaw as _initDataRaw,
     initDataState as _initDataState,
@@ -71,7 +69,6 @@ export default function Page() {
         return (
             <main className="p-6">
                 <h1 className="text-xl font-semibold mb-3">PolyVoice Mini</h1>
-                <DebugInitData />
                 <p className="text-sm text-red-600">
                     Set <code>NEXT_PUBLIC_TG_BOT_USERNAME</code> in <code>.env.local</code>.
                 </p>
@@ -87,11 +84,10 @@ export default function Page() {
         );
     }
 
-    if (mode === "miniapp") {
+    if (mode === "miniapp" && raw) {
         return (
             <main className="p-6">
                 <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.9</h1>
-                <DebugInitData />
                 <p className="text-sm opacity-70">Redirecting inside Telegram…</p>
             </main>
         );
@@ -100,13 +96,12 @@ export default function Page() {
     const authUrl =
         AUTH_URL_ENV ||
         (typeof window !== "undefined"
-            ? `${window.location.origin}/api/telegram/auth/`
-            : "/api/telegram/auth/");
+            ? `${window.location.origin}/auth/telegram-widget`
+            : "/auth/telegram-widget");
 
     return (
         <main className="p-6">
             <h1 className="text-xl font-semibold mb-3">PolyVoice Mini 0.0.9</h1>
-            <DebugInitData />
             <Script
                 src="https://telegram.org/js/telegram-widget.js?21"
                 strategy="afterInteractive"

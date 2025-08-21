@@ -16,7 +16,7 @@ export default function TelegramSdkLoader() {
         }
 
         try {
-            const scriptId = 'telegram-webapp-sdk';
+            const scriptId = 'telegram-widget-webapp-sdk';
             const existing = document.getElementById(scriptId) as HTMLScriptElement | null;
             if (existing) {
                 existing.addEventListener('load', () => setLoaded(true), { once: true });

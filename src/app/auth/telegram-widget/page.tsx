@@ -1,3 +1,4 @@
+// src/app/auth/telegram-widget/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,27 +10,16 @@ export default function TelegramAuthPage() {
     useEffect(() => {
         const run = async () => {
             try {
-                const url = new URL(window.location.href);
-                const source = url.searchParams.get("source");
-                let search: string | null = null;
-
-                if (source === "miniapp") {
-                    const tg = (window as any).Telegram?.WebApp;
-                    search = tg?.initData || null;
-                } else {
-                    // Берём всё что после ? включая &
-                    search = window.location.href.split("?")[1] || null;
-                }
-
+                const search = window.location.search.substring(1);
                 if (!search) {
                     setMsg("No auth params found.");
                     return;
                 }
 
-                const res = await fetch("/api/backend/telegram-auth", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ search, source }),
+                // идём через Next.js proxy → Django
+                const res = await fetch(`/api/backend/telegram-auth-widget?${search}`, {
+                    method: "GET",
+                    credentials: "include",
                 });
 
                 const data = await res.json();
